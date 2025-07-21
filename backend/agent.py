@@ -20,7 +20,7 @@ load_dotenv()
 # '0.0.0.0' makes it accessible from any IP address.
 # For better security, you could change this to '127.0.0.1' and use Nginx
 # as a reverse proxy if you want to expose it publicly.
-HOST = '0.0.0.0'
+HOST = '127.0.0.1'
 PORT = 9797
 
 # The path to your Nginx configuration files.
