@@ -1,6 +1,6 @@
 // --- Configuration ---
 // IMPORTANT: Replace <YOUR_VPS_IP> with the actual IP address of your server.
-const API_URL = 'http://194.164.148.144:9797/api/v1/stats';
+const API_URL = 'http://127.0.0.1:9797/api/v1/stats';
 
 // Global variable to hold the fetched data so it's accessible to all functions
 let dashboardData = {};
