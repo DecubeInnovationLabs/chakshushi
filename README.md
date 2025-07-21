@@ -2,8 +2,8 @@
 
 A simple, self-hosted, at-a-glance dashboard to monitor the status of key services on your VPS. It consists of a lightweight Python (Flask) backend agent that runs on the server and a clean HTML/JS/Tailwind CSS frontend that displays the data.
 
-![Dashboard Screenshot](https://i.imgur.com/your-screenshot-url.png) <!-- Replace with a URL to a screenshot of our dashboard -->
-
+![alt text](image.png) <!-- Replace with a URL to a screenshot of your dashboard -->
+![alt text](image-2.png)
 ---
 
 ## Features
@@ -133,25 +133,83 @@ You can check the status to ensure it's running correctly:
 sudo systemctl status vps-agent
 ```
 
-### 4. Frontend Configuration
+### 4. Hosting with Nginx (Recommended)
 
-The frontend files (`index.html`, `script.js`, `style.css`) are located in the `frontend/live` directory. You need to configure the `script.js` file to point to your agent's API.
+Instead of opening the `index.html` file directly, it's much better to serve the frontend using Nginx. This setup also acts as a reverse proxy for the API, which is more secure and avoids potential CORS issues.
+
+#### a. Create Nginx Configuration File
+
+Create a new Nginx server block configuration file.
+
+```bash
+sudo nano /etc/nginx/sites-available/dashboard
+```
+
+Paste the following configuration into the file. Remember to replace the placeholders.
+
+```nginx
+server {
+    listen 80;
+    server_name your_vps_ip_or_domain.com; # Replace with your VPS IP or a domain name
+
+    # Path to the frontend files
+    root /home/your_username/path/to/project/frontend/live; # Replace with the correct path
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # Reverse proxy for the API
+    # All requests to /api/... will be forwarded to the Python agent
+    location /api/ {
+        proxy_pass [http://127.0.0.1:9999/api/](http://127.0.0.1:9999/api/);
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+#### b. Enable the Site
+
+Create a symbolic link from your new configuration file to the `sites-enabled` directory.
+
+```bash
+sudo ln -s /etc/nginx/sites-available/dashboard /etc/nginx/sites-enabled/
+```
+
+#### c. Test and Restart Nginx
+
+First, test your Nginx configuration for syntax errors.
+
+```bash
+sudo nginx -t
+```
+
+If the test is successful, restart Nginx to apply the changes.
+
+```bash
+sudo systemctl restart nginx
+```
+
+### 5. Frontend Configuration
+
+Now that Nginx is handling the requests, we can simplify the API URL.
 
 #### a. Edit `script.js`
 
-Open the `frontend/live/script.js` file and update the `API_URL` variable.
+Open the `frontend/live/script.js` file and update the `API_URL` variable to be a relative path. This works because Nginx will proxy any request starting with `/api/` to the backend agent.
 
 ```javascript
 // --- Configuration ---
-// IMPORTANT: Replace <YOUR_VPS_IP> with the actual IP address of your server.
-const API_URL = 'http://<YOUR_VPS_IP>:9999/api/v1/stats';
+// The URL is now relative, as Nginx will handle proxying the request.
+const API_URL = '/api/v1/stats';
 ```
 
-Replace `<YOUR_VPS_IP>` with your server's public IP address. If you are accessing the dashboard from the same server, you can use `http://127.0.0.1:9999/api/v1/stats`.
+### 6. Access Your Dashboard
 
-### 5. Access Your Dashboard
-
-You're all set! To view the dashboard, simply open the `frontend/live/index.html` file in your web browser. When prompted, enter the `SECRET_PASSWORD` you set in the `.env` file.
+You're all set! To view the dashboard, navigate to the `server_name` you configured in Nginx (e.g., `http://your_vps_ip_or_domain.com`) in your web browser. When prompted, enter the `SECRET_PASSWORD` you set in the `.env` file.
 
 ---
 
@@ -176,4 +234,4 @@ You're all set! To view the dashboard, simply open the `frontend/live/index.html
 
 ## Security Note
 
-The password protection is a basic authentication layer. For enhanced security, consider placing the agent behind a reverse proxy (like Nginx) and adding SSL encryption. Ensure your VPS firewall is configured to only allow access to port `9999` from trusted IP addresses if necessary.
+The password protection is a basic authentication layer. For enhanced security, consider using a tool like `certbot` to add a free SSL certificate to your Nginx site. Ensure your VPS firewall is configured to only allow access to port `9999` from localhost, and expose only ports 80 (HTTP) and 443 (HTTPS) to the public.
